@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+
+</head>
+<body class="flex items-center justify-center h-screen bg-gray-100" > 
+  <!-- <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700" id="loginButton">Login</button>  -->
+  <form action="/auth/google" method="get"> 
+    <!-- <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700 flex items-center justify-center h-screen bg-gray-100">Login</button> -->
+    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+      Login With Google
+  </button>
+</form>
+
+
+
+    <script>
+        document.getElementById('loginButton').addEventListener('click', function() {
+            window.location.href = 'https://localhost:2020/auth';
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+<!--  require('dotenv').config();
+const express = require('express');
+const { google } = require('googleapis');
+const mysql = require('mysql2');
+const app = express();
+const PORT = 2020;
+const OAuth2 = google.auth.OAuth2;
+
+const oauth2Client = new OAuth2(
+    '315558729563-1faqde4j7h4nfb1clegrneaho4goock6.apps.googleusercontent.com',
+        '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',
+        'http://localhost:2020/oauth2callback'
+      );
+
+// MySQL connection
+const db = mysql.createConnection({
+   host: 'localhost',
+   user: 'root',
+   password: 'karan@123',
+   database: 'vijay'
+ });
+
+app.get("/", (req, res) => {
+  res.render("home.ejs");
+});
+
+db.connect(err => {
+  if (err) throw err;
+  console.log('Connected to MySQL database');
+});
+
+app.get('/auth', (req, res) => {
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/gmail.readonly'],
+    prompt: 'consent',
+  });
+  res.redirect(authUrl);
+});
+
+app.get('/oauth2callback', async (req, res) => {
+  try {
+    const { code } = req.query;
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+    console.log('Tokens:', tokens);
+    //res.send('Authentication successful! You can close this tab.');
+    res.render("desti.ejs");
+  } catch (error) {
+    console.error('Error during OAuth callback:', error.response?.data || error.message);
+    res.status(500).send('Authentication failed');
+  }
+});
+
+const getEmails = async (auth) => {
+    const gmail = google.gmail({ version: 'v1', auth });
+    const res = await gmail.users.messages.list({
+      userId: 'me',
+      q: 'from:alerts@axisbank.com' // Modify the query to match your needs
+    });
+    return res.data.messages || [];
+  };
+  
+  const getMessage = async (auth, messageId) => {
+    const gmail = google.gmail({ version: 'v1', auth });
+    const res = await gmail.users.messages.get({
+      userId: 'me',
+      id: messageId,
+      format: 'full'
+    });
+    return res.data;
+  };
+  
+  const parseTransactionData = (message) => {
+    try {
+      const emailDataPart = message.payload.parts.find(part => part.mimeType === 'text/plain');
+      if (!emailDataPart) {
+        console.error('No text/plain part found in the email message');
+        return null;
+      }
+  
+      const emailData = Buffer.from(emailDataPart.body.data, 'base64').toString('utf-8');
+      console.log('Email Data:', emailData); // Log email data for debugging
+  
+      const sender = message.payload.headers.find(header => header.name === 'From').value;
+      const subject = message.payload.headers.find(header => header.name === 'Subject').value;
+      const snippet = message.snippet;
+  
+      const transaction = {
+        message_id: message.id,
+        sender,
+        subject,
+        snippet
+      };
+  
+      console.log('Parsed Transaction:', transaction); // Log parsed transaction for debugging
+      return transaction;
+    } catch (error) {
+      console.error('Error parsing transaction data:', error);
+      return null;
+    }
+  };
+  
+
+
+const storeTransaction = (transaction) => {
+    const insertTransactionQuery = 'INSERT INTO transactions (message_id, sender, subject, snippet) VALUES (?, ?, ?, ?)';
+  
+    db.query(insertTransactionQuery, [
+      transaction.message_id,
+      transaction.sender,
+      transaction.subject,
+      transaction.snippet
+    ], (err, results) => {
+      if (err) {
+        console.error('Error storing transaction:', err);
+        return;
+      }
+      console.log('Transaction stored:', results.insertId);
+  
+      // Execute the second query after the first one completes
+      const insertBankDetailsQuery = `
+        INSERT INTO bankDetails (message_id, amount, debit_or_credit, transaction_date)
+        SELECT 
+          message_id, 
+          CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(snippet, 'INR ', -1), ' ', 1) AS DECIMAL(10, 2)) AS amount, 
+          'debit' AS debit_or_credit, 
+          DATE_FORMAT(STR_TO_DATE(SUBSTRING_INDEX(SUBSTRING_INDEX(snippet, 'on ', -1), ' ', 1), '%d-%m-%Y'), '%Y-%m-%d') AS transaction_date 
+        FROM transactions
+        WHERE message_id = ?
+      `;
+  
+      db.query(insertBankDetailsQuery, [transaction.message_id], (err, results) => {
+        if (err) {
+          console.error('Error storing bank details:', err);
+          return;
+        }
+        console.log('Bank details stored:', results.insertId);
+      });
+    });
+  };
+  
+  app.get('/fetch-transactions', async (req, res) => {
+    try {
+      const messages = await getEmails(oauth2Client);
+      if (!messages.length) {
+        console.log('No messages found.');
+        return res.send('No transactions found.');
+      }
+  
+      for (const msg of messages) {
+        const message = await getMessage(oauth2Client, msg.id);
+        const transaction = parseTransactionData(message);
+        if (transaction) {
+          storeTransaction(transaction);
+        }
+      }
+      res.send('Transactions fetched and stored successfully.');
+    } catch (err) {
+      console.error('Error fetching transactions:', err.response?.data || err.message);
+      res.status(500).send('An error occurred while fetching transactions.');
+    }
+  });
+  
+
+
+
+
+
+
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+
+--> 
+
+
+
+<!-- require('dotenv').config();
+const express = require('express');
+const { google } = require('googleapis');
+const mysql = require('mysql2');
+const app = express();
+const PORT = 2020;
+const OAuth2 = google.auth.OAuth2;
+const cookieparser = require("cookie-parser");
+const session = require("express-session");
+const flash = require("connect-flash");
+const path  = require("path");
+
+app.set("view engine" , "ejs");
+app.set("views",path.join(__dirname,"views") );
+
+
+const sessionoptions = {
+    secret:"mysupersecretkey" ,
+    resave:false,
+    saveUninitialized:true,
+    cookie :{
+        expires : Date.now() + (7 * 24 * 60 * 60 * 1000),
+        maxAge : 7 * 24 * 60 * 60 * 1000,
+        httpOnly : true,
+
+    }
+}
+
+app.use(session(sessionoptions));
+app.use(flash());
+
+
+app.use((req,res,next) => {
+    res.locals.success = req.flash("success");
+    next();
+})
+
+const oauth2Client = new OAuth2(
+    '315558729563-1faqde4j7h4nfb1clegrneaho4goock6.apps.googleusercontent.com',
+        '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',
+        'http://localhost:2020/oauth2callback'
+      );
+
+// MySQL connection
+const db = mysql.createConnection({
+   host: 'localhost',
+   user: 'root',
+   password: 'karan@123',
+   database: 'vijay'
+ });
+
+app.get("/", (req, res) => {
+  res.render("home.ejs");
+});
+
+db.connect(err => {
+  if (err) throw err;
+  console.log('Connected to MySQL database');
+});
+
+app.get('/auth', (req, res) => {
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/gmail.readonly'],
+    prompt: 'consent',
+  });
+  res.redirect(authUrl);
+});
+
+app.get('/oauth2callback', async (req, res) => {
+  try {
+    const { code } = req.query;
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+    console.log('Tokens:', tokens);
+    //res.send('Authentication successful! You can close this tab.');
+    req.flash("success" , "you have done it kp");
+    res.render("desti.ejs");
+  } catch (error) {
+    console.error('Error during OAuth callback:', error.response?.data || error.message);
+    res.status(500).send('Authentication failed');
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+const getEmails = async (auth) => {
+    const gmail = google.gmail({ version: 'v1', auth });
+    const res = await gmail.users.messages.list({
+      userId: 'me',
+      q: 'from:alerts@axisbank.com' // Modify the query to match your needs
+    });
+    return res.data.messages || [];
+  };
+  
+  const getMessage = async (auth, messageId) => {
+    const gmail = google.gmail({ version: 'v1', auth });
+    const res = await gmail.users.messages.get({
+      userId: 'me',
+      id: messageId,
+      format: 'full'
+    });
+    return res.data;
+  };
+  
+  const parseTransactionData = (message) => {
+    try {
+      const emailDataPart = message.payload.parts.find(part => part.mimeType === 'text/plain');
+      if (!emailDataPart) {
+        console.error('No text/plain part found in the email message');
+        return null;
+      }
+  
+      const emailData = Buffer.from(emailDataPart.body.data, 'base64').toString('utf-8');
+      console.log('Email Data:', emailData); // Log email data for debugging
+  
+      const sender = message.payload.headers.find(header => header.name === 'From').value;
+      const subject = message.payload.headers.find(header => header.name === 'Subject').value;
+      const snippet = message.snippet;
+  
+      const transaction = {
+        message_id: message.id,
+        sender,
+        subject,
+        snippet
+      };
+  
+      console.log('Parsed Transaction:', transaction); // Log parsed transaction for debugging
+      return transaction;
+    } catch (error) {
+      console.error('Error parsing transaction data:', error);
+      return null;
+    }
+  };
+  
+
+
+
+const storeTransaction = (transaction) => {
+    const insertTransactionQuery = 'INSERT INTO transactions (message_id, sender, subject, snippet) VALUES (?, ?, ?, ?)';
+  
+    db.query(insertTransactionQuery, [
+      transaction.message_id,
+      transaction.sender,
+      transaction.subject,
+      transaction.snippet
+    ], (err, results) => {
+      if (err) {
+        console.error('Error storing transaction:', err);
+        return;
+      }
+      console.log('Transaction stored:', results.insertId);
+  
+      // Execute the second query after the first one completes
+      const insertBankDetailsQuery = `
+        INSERT INTO bankDetails (message_id, amount, debit_or_credit, transaction_date)
+        SELECT 
+          message_id, 
+          CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(snippet, 'INR ', -1), ' ', 1) AS DECIMAL(10, 2)) AS amount, 
+          SUBSTRING_INDEX(subject, ' ', 1) AS debit_or_credit, 
+          DATE_FORMAT(STR_TO_DATE(SUBSTRING_INDEX(SUBSTRING_INDEX(snippet, 'on ', -1), ' ', 1), '%d-%m-%Y'), '%Y-%m-%d') AS transaction_date 
+        FROM transactions
+        WHERE message_id = ?
+      `;
+  
+      db.query(insertBankDetailsQuery, [transaction.message_id], (err, results) => {
+        if (err) {
+          console.error('Error storing bank details:', err);
+          return;
+        }
+        console.log('Bank details stored:', results.insertId);
+      });
+    });
+  };
+
+
+
+
+
+app.get('/transactions', (req, res) => {
+    const search = req.query.search || '';
+    const searchType = req.query.searchType || 'message_id';
+  
+    // Query with search functionality
+    const query = `
+      SELECT * FROM bankDetails
+      WHERE ${searchType} LIKE ?
+    `;
+  
+    db.query(query, [`%${search}%`], (err, results) => {
+      if (err) {
+        console.error('Error fetching transactions:', err);
+        return res.status(500).send('An error occurred while fetching transactions.');
+      }
+      res.render('transactionskp.ejs', { transactions: results, search: search, searchType: searchType });
+    });
+  });
+  
+  
+  
+  app.get('/fetch-transactions', async (req, res) => {
+    try {
+      const messages = await getEmails(oauth2Client);
+      if (!messages.length) {
+        console.log('No messages found.');
+        return res.send('No transactions found.');
+      }
+  
+      for (const msg of messages) {
+        const message = await getMessage(oauth2Client, msg.id);
+        const transaction = parseTransactionData(message);
+        if (transaction) {
+          storeTransaction(transaction);
+        }
+      }
+      
+      //res.send('Transactions fetched and stored successfully.');
+      res.render("data.ejs");
+
+    } catch (err) {
+      console.error('Error fetching transactions:', err.response?.data || err.message);
+      res.status(500).send('An error occurred while fetching transactions.');
+    }
+  });
+
+
+  app.get('/sum-amounts', (req, res) => {
+    const query = 'SELECT SUM(amount) AS total_amount FROM bankDetails  WHERE debit_or_credit = "Debit" ';
+    
+    db.query(query, (err, results) => {
+      if (err) {
+        console.error('Error fetching total amount:', err);
+        return res.status(500).send('An error occurred while fetching the total amount.');
+      }
+      res.render('totalsum.ejs', { total: results[0].total_amount });
+    });
+  });
+
+
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });  -->

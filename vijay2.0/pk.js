@@ -1,0 +1,1149 @@
+// require('dotenv').config();
+// const express = require('express');
+// const { google } = require('googleapis');
+// const mysql = require('mysql2');
+// const app = express();
+// const PORT = 2020;
+// const OAuth2 = google.auth.OAuth2;
+// const cookieparser = require("cookie-parser");
+// const session = require("express-session");
+// const flash = require("connect-flash");
+// const path = require("path");
+// const bodyParser = require("body-parser");
+
+// app.set("view engine", "ejs");
+// app.set("views", path.join(__dirname, "views"));
+
+// app.use(bodyParser.urlencoded({ extended: true }));
+// app.use(bodyParser.json());
+
+// const sessionoptions = {
+//     secret: "mysupersecretkey",
+//     resave: false,
+//     saveUninitialized: true,
+//     cookie: {
+//         expires: Date.now() + (7 * 24 * 60 * 60 * 1000),
+//         maxAge: 7 * 24 * 60 * 60 * 1000,
+//         httpOnly: true,
+//     }
+// }
+
+// app.use(session(sessionoptions));
+// app.use(flash());
+
+// app.use((req, res, next) => {
+//     res.locals.success = req.flash("success");
+//     next();
+// })
+
+// const oauth2Client = new OAuth2(
+//     '315558729563-1faqde4j7h4nfb1clegrneaho4goock6.apps.googleusercontent.com',
+//     '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',
+//     'http://localhost:2020/oauth2callback'
+// );
+
+// // MySQL connection
+// const db = mysql.createConnection({
+//     host: 'localhost',
+//     user: 'root',
+//     password: 'karan@123',
+//     database: 'vijay'
+// });
+
+// app.get("/", (req, res) => {
+//     res.render("home.ejs");
+// });
+
+// db.connect(err => {
+//     if (err) throw err;
+//     console.log('Connected to MySQL database');
+// });
+
+// app.get('/auth', (req, res) => {
+//     const authUrl = oauth2Client.generateAuthUrl({
+//         access_type: 'offline',
+//         scope: ['https://www.googleapis.com/auth/gmail.readonly'],
+//         prompt: 'consent',
+//     });
+//     res.redirect(authUrl);
+// });
+
+// app.get('/oauth2callback', async (req, res) => {
+//     try {
+//         const { code } = req.query;
+//         const { tokens } = await oauth2Client.getToken(code);
+//         oauth2Client.setCredentials(tokens);
+//         console.log('Tokens:', tokens);
+//         req.flash("success", "You have done it KP");
+
+//         const search = req.query.search || '';
+//         const searchType = 'message_id';
+//         const query = `
+//             SELECT 
+//                 message_id, 
+//                 amount, 
+//                 debit_or_credit, 
+//                 DATE_FORMAT(transaction_date, '%d-%m-%Y') as transaction_date, 
+//                 TIME_FORMAT(transaction_time, '%H:%i:%s') as transaction_time, 
+//                 info 
+//             FROM bankDetails2
+//             WHERE ${searchType} LIKE ?
+//         `;
+//         db.query(query, [`%${search}%`], (err, results) => {
+//             if (err) {
+//                 console.error('Error fetching transactions:', err);
+//                 return res.status(500).send('An error occurred while fetching transactions.');
+//             }
+//             res.render('transactionskp.ejs', { transactions: results, search: search, searchType: searchType });
+//         });
+//     } catch (error) {
+//         console.error('Error during OAuth callback:', error.response?.data || error.message);
+//         res.status(500).send('Authentication failed');
+//     }
+// });
+
+// const getEmails = async (auth, startDate, endDate) => {
+//     const gmail = google.gmail({ version: 'v1', auth });
+//     const query = `from:alerts@axisbank.com after:${startDate} before:${endDate}`;
+//     const res = await gmail.users.messages.list({
+//         userId: 'me',
+//         q: query
+//     });
+//     return res.data.messages || [];
+// };
+
+// const getMessage = async (auth, messageId) => {
+//     const gmail = google.gmail({ version: 'v1', auth });
+//     const res = await gmail.users.messages.get({
+//         userId: 'me',
+//         id: messageId,
+//         format: 'full'
+//     });
+//     return res.data;
+// };
+
+// const parseTransactionData = (message) => {
+//     try {
+//         const emailDataPart = message.payload.parts.find(part => part.mimeType === 'text/plain');
+//         if (!emailDataPart) {
+//             console.error('No text/plain part found in the email message');
+//             return null;
+//         }
+
+//         const emailData = Buffer.from(emailDataPart.body.data, 'base64').toString('utf-8');
+//         console.log('Email Data:', emailData);
+
+//         const sender = message.payload.headers.find(header => header.name === 'From').value;
+//         const subject = message.payload.headers.find(header => header.name === 'Subject').value;
+//         const snippet = message.snippet;
+
+//         const amountMatch = emailData.match(/INR\s([\d,.]+)/);
+//         const debitCreditMatch = emailData.match(/(debited|credited)/i);
+//         const dateMatch = emailData.match(/\d{2}-\d{2}-\d{4}/);
+//         const timeMatch = emailData.match(/\d{2}:\d{2}:\d{2}\sIST/);
+//         const infoMatch = emailData.match(/Info-(UPI\/P2A\/\d+\/[\w\s.]+)/);
+
+//         const transaction = {
+//             message_id: message.id,
+//             sender,
+//             subject,
+//             amount: amountMatch ? amountMatch[1] : null,
+//             debit_or_credit: debitCreditMatch ? debitCreditMatch[1] : null,
+//             date: dateMatch ? dateMatch[0] : null,
+//             time: timeMatch ? timeMatch[0] : null,
+//             info: infoMatch ? infoMatch[1] : null,
+//             snippet
+//         };
+
+//         console.log('Parsed Transaction:', transaction);
+//         return transaction;
+//     } catch (error) {
+//         console.error('Error parsing transaction data:', error);
+//         return null;
+//     }
+// };
+
+// const storeTransaction = (transaction) => {
+//     const checkTransactionQuery = 'SELECT COUNT(*) AS count FROM transactions WHERE message_id = ?';
+//     db.query(checkTransactionQuery, [transaction.message_id], (err, results) => {
+//         if (err) {
+//             console.error('Error checking transaction:', err);
+//             return;
+//         }
+
+//         if (results[0].count > 0) {
+//             console.log('Transaction already exists, skipping:', transaction.message_id);
+//             return;
+//         }
+
+//         const insertTransactionQuery = 'INSERT INTO transactions (message_id, sender, subject, snippet) VALUES (?, ?, ?, ?)';
+//         db.query(insertTransactionQuery, [
+//             transaction.message_id,
+//             transaction.sender,
+//             transaction.subject,
+//             transaction.snippet
+//         ], (err, results) => {
+//             if (err) {
+//                 console.error('Error storing transaction:', err);
+//                 return;
+//             }
+//             console.log('Transaction stored:', results.insertId);
+
+//             // Convert date to MySQL format (YYYY-MM-DD)
+//             const [day, month, year] = transaction.date.split('-');
+//             const formattedDate = `${year}-${month}-${day}`;
+
+//             const insertBankDetailsQuery = `
+//                 INSERT INTO bankDetails2 (message_id, amount, debit_or_credit, transaction_date, transaction_time, info)
+//                 VALUES (?, ?, ?, ?, ?, ?)
+//             `;
+//             db.query(insertBankDetailsQuery, [
+//                 transaction.message_id,
+//                 parseFloat(transaction.amount.replace(/,/g, '')), // Convert amount to a number
+//                 transaction.debit_or_credit,
+//                 formattedDate, // transaction.date,
+//                 transaction.time.split(' ')[0], // Extract time part and convert to TIME format if necessary
+//                 transaction.info
+//             ], (err, results) => {
+//                 if (err) {
+//                     console.error('Error storing bank details:', err);
+//                     return;
+//                 }
+//                 console.log('Bank details stored:', results.insertId);
+//             });
+//         });
+//     });
+// };
+
+// app.get('/transactions', (req, res) => {
+//   const search = req.query.search || '';
+//   const searchType = req.query.searchType || 'message_id';
+
+//   let queryTotal;
+//   let queryTransactions;
+//   let queryParams = [];
+
+//   if (searchType === 'month') {
+//     queryTotal = `
+//       SELECT SUM(amount) AS total_amount 
+//       FROM bankDetails2 
+//       WHERE debit_or_credit = "debited" 
+//       AND MONTH(transaction_date) = ? 
+//       AND YEAR(transaction_date) = YEAR(CURDATE())
+//     `;
+//     queryTransactions = `
+//       SELECT 
+//         message_id, 
+//         amount, 
+//         debit_or_credit, 
+//         DATE_FORMAT(transaction_date, '%d-%m-%Y') as transaction_date, 
+//         TIME_FORMAT(transaction_time, '%H:%i:%s') as transaction_time, 
+//         info 
+//       FROM bankDetails2
+//       WHERE MONTH(transaction_date) = ? 
+//       AND YEAR(transaction_date) = YEAR(CURDATE())
+//     `;
+//     queryParams.push(search);
+//   } else {
+//     queryTotal = 'SELECT SUM(amount) AS total_amount FROM bankDetails2 WHERE debit_or_credit = "debited"';
+//     queryTransactions = `
+//       SELECT 
+//         message_id, 
+//         amount, 
+//         debit_or_credit, 
+//         DATE_FORMAT(transaction_date, '%d-%m-%Y') as transaction_date, 
+//         TIME_FORMAT(transaction_time, '%H:%i:%s') as transaction_time, 
+//         info 
+//       FROM bankDetails2
+//       WHERE ${searchType} LIKE ?
+//     `;
+//     queryParams.push(`%${search}%`);
+//   }
+
+//   // First query to get total amount
+//   db.query(queryTotal, queryParams, (err, totalResults) => {
+//     if (err) {
+//       console.error('Error fetching total amount:', err);
+//       return res.status(500).send('An error occurred while fetching the total amount.');
+//     }
+
+//     // Second query to get transaction details
+//     db.query(queryTransactions, queryParams, (err, transactionResults) => {
+//       if (err) {
+//         console.error('Error fetching transactions:', err);
+//         return res.status(500).send('An error occurred while fetching transactions.');
+//       }
+
+//       // Render the EJS template with fetched data
+//       res.render('transactionskp.ejs', { 
+//         transactions: transactionResults, 
+//         total: totalResults[0]?.total_amount || 0, // Access total_amount from totalResults
+//         search: search, 
+//         searchType: searchType 
+//       });
+//     });
+//   });
+// });
+
+// async function fetchStartDate() {
+//   return new Promise((resolve, reject) => {
+//       const query = 'SELECT transaction_date FROM bankDetails2 ORDER BY id DESC LIMIT 1 OFFSET 1';
+      
+//       db.query(query, (error, results) => {
+//           if (error) {
+//               return reject(error);  // Reject the promise if there's an error with the query
+//           }
+//           if (results.length > 0) {
+//               const transactionDate = new Date(results[0].transaction_date);
+//               const formattedDate = transactionDate.toISOString().split('T')[0];  // Format to YYYY-MM-DD
+//               resolve(formattedDate);
+//           } else {
+//               resolve(null);  // Resolve with null if no results are found
+//           }
+//       });
+//   });
+// }
+
+// app.get('/fetch-transactions', async (req, res) => {
+//     const { endDate } = req.query;
+//     try {
+//         const startDate = await fetchStartDate();
+//         console.log('Start Date:', startDate);
+
+//         if (!startDate) {
+//             return res.status(400).send('No start date found.');
+//         }
+
+//         const messages = await getEmails(oauth2Client, startDate, endDate);
+//         if (!messages.length) {
+//             console.log('No messages found.');
+//             return res.send('No transactions found.');
+//         }
+
+//         for (const msg of messages) {
+//             const message = await getMessage(oauth2Client, msg.id);
+//             const transaction = parseTransactionData(message);
+//             if (transaction) {
+//                 storeTransaction(transaction);
+//             }
+//         }
+
+//         res.render("data.ejs");
+//     } catch (err) {
+//         console.error('Error fetching transactions:', err.response?.data || err.message);
+//         res.status(500).send('An error occurred while fetching transactions.');
+//     }
+// });
+
+// app.post('/sum-amounts', (req, res) => {
+//   const month = req.body.month;
+//   const year = 2024;
+
+//   const query = `
+//       SELECT SUM(amount) AS total_amount 
+//       FROM bankDetails2 
+//       WHERE debit_or_credit = "debited" 
+//       AND MONTH(transaction_date) = ? 
+//       AND YEAR(transaction_date) = ?
+//   `;
+  
+//   db.query(query, [month, year], (err, results) => {
+//       if (err) {
+//           console.error('Error fetching total amount:', err);
+//           return res.status(500).send('An error occurred while fetching the total amount.');
+//       }
+//       res.render('totalsum.ejs', { total: results[0].total_amount });
+//   });
+// });
+
+// app.get('/addExpenses', (req, res) => {
+//     res.render("addexpenses.ejs")
+// });
+
+// app.post('/addExpenses', (req, res) => {
+//     const {
+//         message_id = null,
+//         amount,
+//         debit_or_credit = null,
+//         transaction_date = null,
+//         transaction_time = null,
+//         transaction_info = null
+//     } = req.body;
+
+//     const query = `
+//         INSERT INTO bankDetails2 (message_id, amount, debit_or_credit, transaction_date, transaction_time, info)
+//         VALUES (?, ?, ?, ?, ?, ?)
+//     `;
+
+//     db.query(query, [message_id, amount, debit_or_credit, transaction_date, transaction_time, transaction_info], (err, results) => {
+//         if (err) {
+//             console.error('Error inserting transaction:', err);
+//             return res.status(500).send('An error occurred while inserting the transaction.');
+//         }
+//         res.send('Transaction submitted successfully.');
+//     });
+// });
+
+// // Logout route
+// // app.get('/logout', (req, res) => {
+// //     req.session.destroy(err => {
+// //         if (err) {
+// //             console.error('Error destroying session:', err);
+// //             return res.redirect('/');
+// //         }
+
+// //         // Redirect to Google's logout endpoint
+// //         const logoutUrl = `https://accounts.google.com/logout?continue=https://appengine.google.com/_ah/logout?continue=http://localhost:${PORT}/`;
+// //         res.redirect(logoutUrl);
+// //     });
+// // });
+
+// app.get('/logout', (req, res) => {
+//     // Clear the session
+   
+//     req.session.destroy(err => {
+//         if (err) {
+//             console.error('Error destroying session:', err);
+//             return res.status(500).send('Error logging out');
+//         }
+//         // Redirect to the login or home page
+//         res.redirect('/');
+//     });
+// });
+
+
+// app.listen(PORT, () => {
+//     console.log(`Server is running on port ${PORT}`);
+// });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+require('dotenv').config();
+const express = require('express');
+const { google } = require('googleapis');
+const mysql = require('mysql2');
+const app = express();
+const PORT = 2020;
+const OAuth2 = google.auth.OAuth2;
+const cookieParser = require("cookie-parser");
+const session = require("express-session");
+const flash = require("connect-flash");
+const path = require("path");
+const bodyParser = require("body-parser");
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
+
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
+const sessionoptions = {
+    secret: "mysupersecretkey",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        expires: Date.now() + (7 * 24 * 60 * 60 * 1000),
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+    }
+}
+
+app.use(session(sessionoptions));
+app.use(flash());
+
+app.use((req, res, next) => {
+    res.locals.success = req.flash("success");
+    next();
+})
+
+const oauth2Client = new OAuth2(
+    '315558729563-1faqde4j7h4nfb1clegrneaho4goock6.apps.googleusercontent.com',
+    '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',
+    'http://localhost:2020/oauth2callback'
+);
+
+
+
+
+// MySQL connection
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: 'karan@123',
+    database: 'vijay'
+});
+
+db.connect(err => {
+    if (err) throw err;
+    console.log('Connected to MySQL database');
+});
+
+app.get("/", (req, res) => {
+    res.render("home.ejs");
+});
+
+app.get('/auth/google', (req, res) => {
+    const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['https://www.googleapis.com/auth/gmail.readonly'],
+        prompt: 'consent',
+    });
+    res.redirect(authUrl);
+});
+
+
+
+app.get('/oauth2callback', async (req, res) => {
+    try {
+        const { code } = req.query;
+        const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
+      ////
+   //   req.session.accessToken = req.user.accessToken;
+      ////
+        req.session.tokens = tokens; // Save tokens in session
+        console.log('Tokens:', tokens);
+        req.flash("success", "You have done it KP");
+
+        const search = req.query.search || '';
+        const searchType = 'message_id';
+        const query = `
+            SELECT 
+                message_id, 
+                amount, 
+                debit_or_credit, 
+                DATE_FORMAT(transaction_date, '%d-%m-%Y') as transaction_date, 
+                TIME_FORMAT(transaction_time, '%H:%i:%s') as transaction_time, 
+                info 
+            FROM bankDetails2
+            WHERE ${searchType} LIKE ?
+        `;
+        db.query(query, [`%${search}%`], (err, results) => {
+            if (err) {
+                console.error('Error fetching transactions:', err);
+                return res.status(500).send('An error occurred while fetching transactions.');
+            }
+            res.render('transactionskp.ejs', { transactions: results, search: search, searchType: searchType });
+        });
+    } catch (error) {
+        console.error('Error during OAuth callback:', error.response?.data || error.message);
+        res.status(500).send('Authentication failed');
+    }
+});
+
+// Middleware to ensure authenticated
+// const ensureAuthenticated = (req, res, next) => {
+//     if (req.session.tokens) {
+//            console.log("kpkpkp");
+//         oauth2Client.setCredentials(req.session.tokens);
+//         next();
+//     } else {
+//        // res.redirect('/auth');
+//        res.render("data.ejs")
+//     }
+// };
+
+const ensureAuthenticated = (req, res, next) => {
+    if (req.session.tokens) {
+        console.log("Access token found in session:", req.session.tokens);
+        oauth2Client.setCredentials(req.session.tokens);
+        
+        // Check if token is expired
+        if (oauth2Client.isTokenExpiring()) {
+            oauth2Client.refreshAccessToken((err, tokens) => {
+                if (err) {
+                    console.error('Error refreshing access token:', err);
+                    return res.redirect('/auth');
+                }
+                req.session.tokens = tokens;
+                next();
+            });
+        } else {
+            next();
+        }
+    } else {
+        console.log("No access token found, redirecting to auth");
+        res.redirect('/auth');
+    }
+};
+
+
+app.get('/transactions', ensureAuthenticated, (req, res) => {
+    const search = req.query.search || '';
+    const searchType = req.query.searchType || 'message_id';
+
+    let queryTotal;
+    let queryTransactions;
+    let queryParams = [];
+
+    if (searchType === 'month') {
+        queryTotal = `
+            SELECT SUM(amount) AS total_amount 
+            FROM bankDetails2 
+            WHERE debit_or_credit = "debited" 
+            AND MONTH(transaction_date) = ? 
+            AND YEAR(transaction_date) = YEAR(CURDATE())
+        `;
+        queryTransactions = `
+            SELECT 
+                message_id, 
+                amount, 
+                debit_or_credit, 
+                DATE_FORMAT(transaction_date, '%d-%m-%Y') as transaction_date, 
+                TIME_FORMAT(transaction_time, '%H:%i:%s') as transaction_time, 
+                info 
+            FROM bankDetails2
+            WHERE MONTH(transaction_date) = ? 
+            AND YEAR(transaction_date) = YEAR(CURDATE())
+        `;
+        queryParams.push(search);
+    } else {
+        queryTotal = 'SELECT SUM(amount) AS total_amount FROM bankDetails2 WHERE debit_or_credit = "debited"';
+        queryTransactions = `
+            SELECT 
+                message_id, 
+                amount, 
+                debit_or_credit, 
+                DATE_FORMAT(transaction_date, '%d-%m-%Y') as transaction_date, 
+                TIME_FORMAT(transaction_time, '%H:%i:%s') as transaction_time, 
+                info 
+            FROM bankDetails2
+            WHERE ${searchType} LIKE ?
+        `;
+        queryParams.push(`%${search}%`);
+    }
+
+    
+    // First query to get total amount
+    db.query(queryTotal, queryParams, (err, totalResults) => {
+        if (err) {
+            console.error('Error fetching total amount:', err);
+            return res.status(500).send('An error occurred while fetching the total amount.');
+        }
+
+        // Second query to get transaction details
+        db.query(queryTransactions, queryParams, (err, transactionResults) => {
+            if (err) {
+                console.error('Error fetching transactions:', err);
+                return res.status(500).send('An error occurred while fetching transactions.');
+            }
+
+            // Render the EJS template with fetched data
+            res.render('transactionskp.ejs', { 
+                transactions: transactionResults, 
+                total: totalResults[0]?.total_amount || 0, // Access total_amount from totalResults
+                search: search, 
+                searchType: searchType 
+            });
+        });
+    });
+});
+
+async function fetchStartDate() {
+    return new Promise((resolve, reject) => {
+        const query = 'SELECT transaction_date FROM bankDetails2 ORDER BY id DESC LIMIT 1 OFFSET 1';
+        
+        db.query(query, (error, results) => {
+            if (error) {
+                return reject(error);  // Reject the promise if there's an error with the query
+            }
+            if (results.length > 0) {
+                const transactionDate = new Date(results[0].transaction_date);
+                const formattedDate = transactionDate.toISOString().split('T')[0];  // Format to YYYY-MM-DD
+                resolve(formattedDate);
+            } else {
+                resolve(null);  // Resolve with null if no results are found
+            }
+        });
+    });
+}
+
+app.get('/fetch-transactions', ensureAuthenticated, async (req, res) => {
+    const { endDate } = req.query;
+    try {
+        const startDate = await fetchStartDate();
+        console.log('Start Date:', startDate);
+
+        if (!startDate) {
+            return res.status(400).send('No start date found.');
+        }
+
+        const messages = await getEmails(oauth2Client, startDate, endDate);
+        if (!messages.length) {
+            console.log('No messages found.');
+            return res.send('No transactions found.');
+        }
+
+        for (const msg of messages) {
+            const message = await getMessage(oauth2Client, msg.id);
+            const transaction = parseTransactionData(message);
+            if (transaction) {
+                storeTransaction(transaction);
+            }
+        }
+
+        res.render("data.ejs");
+    } catch (err) {
+        console.error('Error fetching transactions:', err.response?.data || err.message);
+        res.status(500).send('An error occurred while fetching transactions.');
+    }
+});
+
+app.post('/sum-amounts', ensureAuthenticated, (req, res) => {
+    const month = req.body.month;
+    const year = 2024;
+
+    const query = `
+        SELECT SUM(amount) AS total_amount 
+        FROM bankDetails2 
+        WHERE debit_or_credit = "debited" 
+        AND MONTH(transaction_date) = ? 
+        AND YEAR(transaction_date) = ?
+    `;
+    
+    db.query(query, [month, year], (err, results) => {
+        if (err) {
+            console.error('Error fetching total amount:', err);
+            return res.status(500).send('An error occurred while fetching the total amount.');
+        }
+        res.render('totalsum.ejs', { total: results[0].total_amount });
+    });
+});
+
+app.get('/addExpenses', ensureAuthenticated, (req, res) => {
+    res.render("addexpenses.ejs")
+});
+
+app.post('/addExpenses', ensureAuthenticated, (req, res) => {
+    const {
+        message_id = null,
+        amount,
+        debit_or_credit = null,
+        transaction_date = null,
+        transaction_time = null,
+        transaction_info = null
+    } = req.body;
+
+    const query = `
+        INSERT INTO bankDetails2 (message_id, amount, debit_or_credit, transaction_date, transaction_time, info)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(query, [message_id, amount, debit_or_credit, transaction_date, transaction_time, transaction_info], (err, results) => {
+        if (err) {
+            console.error('Error inserting transaction:', err);
+            return res.status(500).send('An error occurred while inserting the transaction.');
+        }
+        res.send('Transaction submitted successfully.');
+    });
+});
+
+app.post('/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            console.error('Error destroying session:', err);
+            return res.status(500).send('Error logging out');
+        }
+        res.redirect('/');
+    });
+});
+
+// app.post('/logout',(req,res , next)=>{
+//     req.logout((err)=>{
+//             if(err){
+//                 return next(err);
+//             }    
+//             res.redirect("/home");  
+//     });
+// });
+
+  
+
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// require('dotenv').config();
+// const express = require('express');
+// const { google } = require('googleapis');
+// const mysql = require('mysql2');
+// const app = express();
+// const PORT = 2020;
+// const OAuth2 = google.auth.OAuth2;
+// const cookieParser = require("cookie-parser");
+// const session = require("express-session");
+// const flash = require("connect-flash");
+// const path = require("path");
+// const bodyParser = require("body-parser");
+
+// app.set("view engine", "ejs");
+// app.set("views", path.join(__dirname, "views"));
+
+// app.use(bodyParser.urlencoded({ extended: true }));
+// app.use(bodyParser.json());
+
+// const sessionoptions = {
+//     secret: "mysupersecretkey",
+//     resave: false,
+//     saveUninitialized: true,
+//     cookie: {
+//         expires: Date.now() + (7 * 24 * 60 * 60 * 1000),
+//         maxAge: 7 * 24 * 60 * 60 * 1000,
+//         httpOnly: true,
+//     }
+// }
+
+// app.use(session(sessionoptions));
+// app.use(flash());
+
+// app.use((req, res, next) => {
+//     res.locals.success = req.flash("success");
+//     next();
+// });
+
+// const oauth2Client = new OAuth2(
+//     '315558729563-1faqde4j7h4nfb1clegrneaho4goock6.apps.googleusercontent.com',
+//     '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',
+//     'http://localhost:2020/oauth2callback'
+// );
+
+// // MySQL connection
+// const db = mysql.createConnection({
+//     host: 'localhost',
+//     user: 'root',
+//     password: 'karan@123',
+//     database: 'vijay'
+// });
+
+// db.connect(err => {
+//     if (err) throw err;
+//     console.log('Connected to MySQL database');
+// });
+
+// app.get("/", (req, res) => {
+//     res.render("home.ejs");
+// });
+
+// app.get('/auth', (req, res) => {
+//     const authUrl = oauth2Client.generateAuthUrl({
+//         access_type: 'offline',
+//         scope: ['https://www.googleapis.com/auth/gmail.readonly'],
+//         prompt: 'consent',
+//     });
+//     res.redirect(authUrl);
+// });
+
+// app.get('/oauth2callback', async (req, res) => {
+//     try {
+//         const { code } = req.query;
+//         const { tokens } = await oauth2Client.getToken(code);
+//         oauth2Client.setCredentials(tokens);
+
+//         req.session.accessToken = tokens.access_token; // Save access token in session
+//         console.log('Access Token:', req.session.accessToken); // Debugging line
+//         req.flash("success", "You have done it KP");
+
+//         const search = req.query.search || '';
+//         const searchType = 'message_id';
+//         const query = `
+//             SELECT 
+//                 message_id, 
+//                 amount, 
+//                 debit_or_credit, 
+//                 DATE_FORMAT(transaction_date, '%d-%m-%Y') as transaction_date, 
+//                 TIME_FORMAT(transaction_time, '%H:%i:%s') as transaction_time, 
+//                 info 
+//             FROM bankDetails2
+//             WHERE ${searchType} LIKE ?
+//         `;
+//         db.query(query, [`%${search}%`], (err, results) => {
+//             if (err) {
+//                 console.error('Error fetching transactions:', err);
+//                 return res.status(500).send('An error occurred while fetching transactions.');
+//             }
+//             res.render('transactionskp.ejs', { transactions: results, search: search, searchType: searchType });
+//         });
+//     } catch (error) {
+//         console.error('Error during OAuth callback:', error.response?.data || error.message);
+//         res.status(500).send('Authentication failed');
+//     }
+// });
+
+// const ensureAuthenticated = (req, res, next) => {
+//     if (req.session.accessToken) {
+//         console.log('Access Token from session:', req.session.accessToken); // Debugging line
+//         oauth2Client.setCredentials({ access_token: req.session.accessToken });
+//         next();
+//     } else {
+//         res.redirect('/auth');
+//     }
+// };
+
+// app.get('/fetch-transactions', ensureAuthenticated, async (req, res) => {
+//     const { endDate } = req.query;
+//     try {
+//         const startDate = await fetchStartDate();
+//         if (!startDate) {
+//             return res.status(400).send('No start date found.');
+//         }
+
+//         const messages = await getEmails(oauth2Client, startDate, endDate);
+//         if (!messages.length) {
+//             console.log('No messages found.');
+//             return res.send('No transactions found.');
+//         }
+
+//         for (const msg of messages) {
+//             const message = await getMessage(oauth2Client, msg.id);
+//             const transaction = parseTransactionData(message);
+//             if (transaction) {
+//                 storeTransaction(transaction);
+//             }
+//         }
+
+//         res.render("data.ejs");
+//     } catch (err) {
+//         console.error('Error fetching transactions:', err.response?.data || err.message);
+//         res.status(500).send('An error occurred while fetching transactions.');
+//     }
+// });
+
+// app.post('/sum-amounts', ensureAuthenticated, (req, res) => {
+//     const month = req.body.month;
+//     const year = 2024;
+
+//     const query = `
+//         SELECT SUM(amount) AS total_amount 
+//         FROM bankDetails2 
+//         WHERE debit_or_credit = "debited" 
+//         AND MONTH(transaction_date) = ? 
+//         AND YEAR(transaction_date) = ?
+//     `;
+    
+//     db.query(query, [month, year], (err, results) => {
+//         if (err) {
+//             console.error('Error fetching total amount:', err);
+//             return res.status(500).send('An error occurred while fetching the total amount.');
+//         }
+//         res.render('totalsum.ejs', { total: results[0].total_amount });
+//     });
+// });
+
+// app.get('/addExpenses', ensureAuthenticated, (req, res) => {
+//     res.render("addexpenses.ejs")
+// });
+
+// app.post('/addExpenses', ensureAuthenticated, (req, res) => {
+//     const {
+//         message_id = null,
+//         amount,
+//         debit_or_credit = null,
+//         transaction_date = null,
+//         transaction_time = null,
+//         transaction_info = null
+//     } = req.body;
+
+//     const query = `
+//         INSERT INTO bankDetails2 (message_id, amount, debit_or_credit, transaction_date, transaction_time, info)
+//         VALUES (?, ?, ?, ?, ?, ?)
+//     `;
+
+//     db.query(query, [message_id, amount, debit_or_credit, transaction_date, transaction_time, transaction_info], (err, results) => {
+//         if (err) {
+//             console.error('Error inserting transaction:', err);
+//             return res.status(500).send('An error occurred while inserting the transaction.');
+//         }
+//         res.send('Transaction submitted successfully.');
+//     });
+// });
+
+// app.post('/logout', (req, res) => {
+//     req.session.destroy(err => {
+//         if (err) {
+//             console.error('Error destroying session:', err);
+//             return res.status(500).send('Error logging out');
+//         }
+//         res.redirect('/');
+//     });
+// });
+
+// app.listen(PORT, () => {
+//     console.log(`Server is running on port ${PORT}`);
+// });
+
+// async function getEmails(auth, startDate, endDate) {
+//     const gmail = google.gmail({ version: 'v1', auth });
+//     const query = `from:alerts@axisbank.com after:${startDate} before:${endDate}`;
+//     const res = await gmail.users.messages.list({
+//         userId: 'me',
+//         q: query
+//     });
+//     return res.data.messages || [];
+// };
+
+// async function getMessage(auth, messageId) {
+//     const gmail = google.gmail({ version: 'v1', auth });
+//     const res = await gmail.users.messages.get({
+//         userId: 'me',
+//         id: messageId,
+//         format: 'full'
+//     });
+//     return res.data;
+// };
+
+// function parseTransactionData(message) {
+//     try {
+//         const emailDataPart = message.payload.parts.find(part => part.mimeType === 'text/plain');
+//         if (!emailDataPart) {
+//             console.error('No text/plain part found in the email message');
+//             return null;
+//         }
+
+//         const emailData = Buffer.from(emailDataPart.body.data, 'base64').toString('utf-8');
+//         console.log('Email Data:', emailData);
+
+//         const sender = message.payload.headers.find(header => header.name === 'From').value;
+//         const subject = message.payload.headers.find(header => header.name === 'Subject').value;
+//         const snippet = message.snippet;
+
+//         const amountMatch = emailData.match(/INR\s([\d,.]+)/);
+//         const debitCreditMatch = emailData.match(/(debited|credited)/i);
+//         const dateMatch = emailData.match(/\d{2}-\d{2}-\d{4}/);
+//         const timeMatch = emailData.match(/\d{2}:\d{2}:\d{2}\sIST/);
+//         const infoMatch = emailData.match(/Info-(UPI\/P2A\/\d+\/[\w\s.]+)/);
+
+//         const transaction = {
+//             message_id: message.id,
+//             sender,
+//             subject,
+//             amount: amountMatch ? amountMatch[1] : null,
+//             debit_or_credit: debitCreditMatch ? debitCreditMatch[1] : null,
+//             date: dateMatch ? dateMatch[0] : null,
+//             time: timeMatch ? timeMatch[0] : null,
+//             info: infoMatch ? infoMatch[1] : null,
+//             snippet
+//         };
+
+//         console.log('Parsed Transaction:', transaction);
+//         return transaction;
+//     } catch (error) {
+//         console.error('Error parsing transaction data:', error);
+//         return null;
+//     }
+// }
+
+// function storeTransaction(transaction) {
+//     const checkTransactionQuery = 'SELECT COUNT(*) AS count FROM transactions WHERE message_id = ?';
+//     db.query(checkTransactionQuery, [transaction.message_id], (err, results) => {
+//         if (err) {
+//             console.error('Error checking transaction:', err);
+//             return;
+//         }
+
+//         if (results[0].count > 0) {
+//             console.log('Transaction already exists, skipping:', transaction.message_id);
+//             return;
+//         }
+
+//         const insertTransactionQuery = 'INSERT INTO transactions (message_id, sender, subject, snippet) VALUES (?, ?, ?, ?)';
+//         db.query(insertTransactionQuery, [
+//             transaction.message_id,
+//             transaction.sender,
+//             transaction.subject,
+//             transaction.snippet
+//         ], (err, results) => {
+//             if (err) {
+//                 console.error('Error storing transaction:', err);
+//                 return;
+//             }
+//             console.log('Transaction stored:', results.insertId);
+
+//             // Convert date to MySQL format (YYYY-MM-DD)
+//             const [day, month, year] = transaction.date.split('-');
+//             const formattedDate = `${year}-${month}-${day}`;
+
+//             const insertBankDetailsQuery = `
+//                 INSERT INTO bankDetails2 (message_id, amount, debit_or_credit, transaction_date, transaction_time, info)
+//                 VALUES (?, ?, ?, ?, ?, ?)
+//             `;
+//             db.query(insertBankDetailsQuery, [
+//                 transaction.message_id,
+//                 parseFloat(transaction.amount.replace(/,/g, '')), // Convert amount to a number
+//                 transaction.debit_or_credit,
+//                 formattedDate, // transaction.date,
+//                 transaction.time.split(' ')[0], // Extract time part and convert to TIME format if necessary
+//                 transaction.info
+//             ], (err, results) => {
+//                 if (err) {
+//                     console.error('Error storing bank details:', err);
+//                     return;
+//                 }
+//                 console.log('Bank details stored:', results.insertId);
+//             });
+//         });
+//     });
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

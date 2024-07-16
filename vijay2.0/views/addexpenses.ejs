@@ -1,0 +1,100 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaction Form</title>
+</head>
+<body>
+  <form method="POST" action="/addExpenses" class="mb-4">
+    <div>
+      <label for="message_id">Message ID</label>
+      <input type="text" name="message_id" id="message_id" class="border p-2" placeholder="Message ID">
+    </div>
+    <div>
+      <label for="amount">Amount <span style="color: red;">*</span></label>
+      <input type="number" name="amount" id="amount" class="border p-2" placeholder="Amount" required>
+    </div>
+    <div>
+      <label for="debit_or_credit">Debit/Credit</label>
+      <select name="debit_or_credit" id="debit_or_credit" class="border p-2">
+        <option value="">Select</option>
+        <option value="debit">Debit</option>
+        <option value="credit">Credit</option>
+      </select>
+    </div>
+    <div>
+      <label for="transaction_date">Transaction Date</label>
+      <input type="date" name="transaction_date" id="transaction_date" class="border p-2" placeholder="Transaction Date">
+    </div>
+    <div>
+      <label for="transaction_time">Transaction Time</label>
+      <input type="time" name="transaction_time" id="transaction_time" class="border p-2" placeholder="Transaction Time">
+    </div>
+    <div>
+      <label for="transaction_info">Transaction Info</label>
+      <textarea name="transaction_info" id="transaction_info" class="border p-2" placeholder="Transaction Info"></textarea>
+    </div>
+    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md">Submit</button>
+  </form>
+</body>
+</html> -->
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transaction Form</title>
+  <!-- Tailwind CSS CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <form method="POST" action="/addExpenses" class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6">Add Transaction</h2>
+    
+    <div class="mb-4">
+      <label for="message_id" class="block text-gray-700">Message ID</label>
+      <input type="text" name="message_id" id="message_id" class="border rounded p-2 w-full" placeholder="Message ID">
+    </div>
+    
+    <div class="mb-4">
+      <label for="amount" class="block text-gray-700">Amount <span class="text-red-500">*</span></label>
+      <input type="number" name="amount" id="amount" class="border rounded p-2 w-full" placeholder="Amount" required>
+    </div>
+    
+    <div class="mb-4">
+      <label for="debit_or_credit" class="block text-gray-700">Debit/Credit</label>
+      <select name="debit_or_credit" id="debit_or_credit" class="border rounded p-2 w-full">
+        <option value="">Select</option>
+        <option value="debit">Debit</option>
+        <option value="credit">Credit</option>
+      </select>
+    </div>
+    
+    <div class="mb-4">
+      <label for="transaction_date" class="block text-gray-700">Transaction Date</label>
+      <input type="date" name="transaction_date" id="transaction_date" class="border rounded p-2 w-full" placeholder="Transaction Date">
+    </div>
+    
+    <div class="mb-4">
+      <label for="transaction_time" class="block text-gray-700">Transaction Time</label>
+      <input type="time" name="transaction_time" id="transaction_time" class="border rounded p-2 w-full" placeholder="Transaction Time">
+    </div>
+    
+    <div class="mb-6">
+      <label for="transaction_info" class="block text-gray-700">Transaction Info</label>
+      <textarea name="transaction_info" id="transaction_info" class="border rounded p-2 w-full" placeholder="Transaction Info"></textarea>
+    </div>
+    
+    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md w-full">Submit</button>
+  </form>
+</body>
+</html>

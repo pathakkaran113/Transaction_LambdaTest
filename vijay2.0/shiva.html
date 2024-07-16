@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="shortut-icon" type="x-icon" href="mario.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+
+    <link rel="stylesheet" href="shiva.css">
+</head>
+<body>
+       <img src="mario.png" alt=""  style=" background-color: #f0f2f5;">
+
+       <div class="chat-container">
+        <div class="chat-header">
+           EXPERT
+        </div>
+        
+   
+    <div class="overlay" id="overlay"></div>
+
+    <div class="popup" id="popup">
+        
+
+
+
+
+        <div class="chat-body" id="chat-body">
+            <div class="message bot-message">
+                <div class="icon">🤖</div>
+                <div class="text">
+                    Hi there 👋<br>How can I help you today?
+                </div>
+            </div>
+            <!-- Add user messages and bot replies here -->
+        </div> 
+        <div class="chat-footer">
+            <input type="text" id="sender" placeholder="Enter a message...">
+            <button id="sendBtn">➤</button>
+        </div>
+    </div>
+
+
+
+    
+</div>
+
+       
+   
+
+    <img src="Mario3.png" style=" height: 250px; width: 170px; background-color: #f0f2f5;"  alt="">
+    <!-- <button onclick="togglePopup()" style="background-color: #e9070f;"></button> -->
+
+
+    <div style="position: absolute; bottom: 20px; right: 20px;">
+        <button style="padding: 10px 20px; background-color: #007bff; color: #fff; border: none; cursor: pointer; border-radius: 20px;" onclick="togglePopup()"  ho>🚀</button>
+      </div>
+
+
+<!-- #eb595f -->
+    <script>  
+        // Get references to elements
+        const popupBtn = document.getElementById('popupBtn');
+        const popup = document.getElementById('popup');
+        const overlay = document.getElementById('overlay');
+
+        // Function to open the popup
+        function openPopup() {
+            popup.style.display = 'block';
+            overlay.style.display = 'block';
+        }
+
+        // Function to close the popup
+        function closePopup() {
+            popup.style.display = 'none';
+            overlay.style.display = 'none';
+        }
+
+        // Event listener for the button click
+        popupBtn.addEventListener('click', openPopup);
+
+        function togglePopup() {
+            var popup = document.getElementById('popup');
+            var button = document.getElementById('toggleBtn');
+
+            if (popup.style.display === 'none' || popup.style.display === '') {
+                popup.style.display = 'block';
+                button.textContent = 'Close Popup';
+            } else {
+                popup.style.display = 'none';
+                button.textContent = 'Open Popup';
+            }
+        }
+    </script>
+
+
+    <script src="shiva.js"></script>
+</body>
+</html>

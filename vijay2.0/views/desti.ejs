@@ -1,0 +1,199 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+    
+</head>
+<body>
+    <form action="/fetch-transactions" method="get">
+        <button  type="submit"  class="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700   ml-24  mt-24 ">Login 3</button>
+    </form>
+
+    
+
+</body>
+</html> -->
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loading Bar</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+    
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+    }
+
+    .loading-bar-container {
+      width: 80%;
+      background-color: #e0e0e0;
+      border-radius: 25px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      display: none; /* Initially hidden */
+    }
+
+    .loading-bar {
+      width: 0;
+      height: 25px;
+      background-color: #4caf50;
+      border-radius: 25px 0 0 25px;
+      animation: loading 50s linear forwards;
+    }
+
+    @keyframes loading {
+      0% {
+        width: 0;
+      }
+      100% {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+    <%= success %>
+  <div class="loading-bar-container" id="loadingContainer">
+    <div class="loading-bar" id="loadingBar"></div>
+  </div>
+
+  <form action="/fetch-transactions" method="get" onsubmit="startLoading()">
+    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700 ml-24 mt-24">Get Trasaction Details</button>
+  </form>
+
+  <script>
+    function startLoading() {
+      const loadingContainer = document.getElementById('loadingContainer');
+      loadingContainer.style.display = 'block'; // Show the loading container
+
+      const loadingBar = document.getElementById('loadingBar');
+      loadingBar.style.animation = 'loading 50s linear forwards';
+
+      // Simulate loading completion after 50 seconds (optional)
+      setTimeout(() => {
+        loadingContainer.style.display = 'none'; // Hide the loading container after animation completes
+      }, 55000); // 50 seconds in milliseconds
+    }
+  </script>
+</body>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loading Bar</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+    
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+    }
+
+    .loading-bar-container {
+      width: 80%;
+      background-color: #e0e0e0;
+      border-radius: 25px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      display: none; /* Initially hidden */
+    }
+
+    .loading-bar {
+      width: 0;
+      height: 25px;
+      background-color: #4caf50;
+      border-radius: 25px 0 0 25px;
+      animation: loading 50s linear forwards;
+    }
+
+    @keyframes loading {
+      0% {
+        width: 0;
+      }
+      100% {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <%= success %>
+  <div class="loading-bar-container" id="loadingContainer">
+    <div class="loading-bar" id="loadingBar"></div>
+  </div>
+  
+  <!-- <form action="/fetch-transactions" method="get" onsubmit="startLoading()">
+    <div class="flex flex-col items-center space-y-4">
+      <input type="date" name="startDate" class="border border-gray-300 px-4 py-2 rounded-md" required>
+      <input type="date" name="endDate" class="border border-gray-300 px-4 py-2 rounded-md" required>
+      <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700">Get Transaction Details</button>
+    </div>
+  </form> -->
+  
+
+ 
+  <!-- <form method="GET" action="/transactions" class="flex justify-center items-center h-screen">
+
+    <input type="hidden" name="searchType" value="message_id">
+    <input type="hidden" name="search" value="">
+    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-700">View Transactions</button>
+  </form> -->
+  
+
+
+
+  <script>
+    function startLoading() {
+      const loadingContainer = document.getElementById('loadingContainer');
+      loadingContainer.style.display = 'block'; // Show the loading container
+
+      const loadingBar = document.getElementById('loadingBar');
+      loadingBar.style.animation = 'loading 50s linear forwards';
+
+      // Simulate loading completion after 50 seconds (optional)
+      setTimeout(() => {
+        loadingContainer.style.display = 'none'; // Hide the loading container after animation completes
+      }, 55000); // 50 seconds in milliseconds
+    }
+      
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

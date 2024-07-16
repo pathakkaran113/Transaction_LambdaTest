@@ -1,0 +1,155 @@
+ <!-- <!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Total Amount</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+</head>
+<body>
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Total Amount</h1>
+    <p class="text-xl">Total amount of all transactions: <%= total %></p>
+  </div>
+</body>
+</html>
+ -->
+
+
+ <!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Total Amount</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+</head>
+<body>
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Total Amount</h1>
+    <form id="limitForm" class="mb-4">
+      <label for="monthlyLimit" class="block text-lg font-medium">Set monthly spending limit:</label>
+      <input type="number" id="monthlyLimit" name="monthlyLimit" class="block w-full px-4 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required />
+      <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:bg-blue-600">Set Limit</button>
+    </form>
+    <p id="totalAmount" class="text-xl">Total amount spent up to now: <%= total %></p>
+    <p id="remainingBalance" class="text-lg mt-2"></p>
+  </div> -->
+
+  <!-- <script>
+    // Function to handle form submission
+    document.getElementById('limitForm').addEventListener('submit', function(event) {
+      event.preventDefault(); // Prevent default form submission
+  
+      // Get the entered monthly limit
+      var monthlyLimit = parseFloat(document.getElementById('monthlyLimit').value);
+  
+      if (!isNaN(monthlyLimit)) {
+        // Get the total amount spent (assuming this is dynamically calculated on the server side)
+        var totalSpent = <%= total %>; // Replace with actual server-side logic to get total spent
+  
+        // Display total amount spent
+        document.getElementById('totalAmount').textContent = "Total amount spent up to now: " + totalSpent.toFixed(2);
+  
+        // Calculate remaining balance
+        var remainingBalance = monthlyLimit - totalSpent;
+        document.getElementById('remainingBalance').textContent = "Remaining balance to use: " + remainingBalance.toFixed(2);
+      } else {
+        alert("Please enter a valid monthly limit."); // Alert user for invalid input (though HTML5 input type="number" should handle basic validation)
+      }
+    });
+  </script> -->
+  
+</body>
+</html> 
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <title>Monthly Spending Limit</title>
+</head>
+<body>
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Total Amount</h1>
+     <form id="limitForm" class="mb-4">
+      <label for="monthlyLimit" class="block text-lg font-medium">Set monthly spending limit:</label>
+      <input type="number" id="monthlyLimit" name="monthlyLimit" class="block w-full px-4 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required />
+      <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:bg-blue-600">Set Limit</button>
+    </form> 
+    <p id="totalAmount" class="text-xl">Total amount spent up to now: <span id="totalSpent"><%= total %></span></p>
+    <p id="remainingBalance" class="text-lg mt-2"></p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('limitForm');
+      const totalSpentElement = document.getElementById('totalSpent');
+      const remainingBalanceElement = document.getElementById('remainingBalance');
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const totalSpent = parseFloat(totalSpentElement.textContent);
+        //const monthlyLimit = parseFloat(document.getElementById('monthlyLimit').value);
+        const monthlyLimit = 5000;
+
+        if (isNaN(totalSpent) || isNaN(monthlyLimit)) {
+          remainingBalanceElement.textContent = 'Invalid input. Please enter a valid number.';
+          return;
+        }
+
+        const remainingBalance = monthlyLimit - totalSpent;
+        remainingBalanceElement.textContent = `Remaining amount to use: ${remainingBalance.toFixed(2)}`;
+      });
+    });
+  </script>
+</body>
+</html> -->
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <title>Monthly Spending Limit</title>
+</head>
+<body>
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Total Amount</h1>
+    <p  class="text-xl">Total Limit: 5000</p>
+    
+    <p id="totalAmount" class="text-xl">Total amount spent up to now: <span id="totalSpent"><%= total %></span></p>
+    <p id="remainingBalance" class="text-lg mt-2"></p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const totalSpentElement = document.getElementById('totalSpent');
+      const remainingBalanceElement = document.getElementById('remainingBalance');
+
+      const totalSpent = parseFloat(totalSpentElement.textContent);
+      const monthlyLimit = 5000;
+
+      if (isNaN(totalSpent) || isNaN(monthlyLimit)) {
+        remainingBalanceElement.textContent = 'Can Not find Data for  this month';//'Invalid input. Please enter a valid number.';
+        return;
+      }
+
+      const remainingBalance = monthlyLimit - totalSpent;
+      remainingBalanceElement.textContent = `Remaining amount to use: ${remainingBalance.toFixed(2)}`;
+    });
+  </script>
+</body>
+</html>

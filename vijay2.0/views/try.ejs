@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <title>Transactions and Monthly Spending Limit</title>
+</head>
+<body>
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Transactions and Monthly Spending Limit</h1>
+
+    <div class="mb-4">
+      <h2 class="text-xl font-semibold">Total Debited Amount: <%= results[0].total_amount %></h2>
+    </div>
+
+    <form id="limitForm" class="mb-4">
+      <label for="monthlyLimit" class="block text-lg font-medium">Set monthly spending limit:</label>
+      <input type="number" id="monthlyLimit" name="monthlyLimit" class="block w-full px-4 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required />
+      <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:bg-blue-600">Set Limit</button>
+    </form>
+
+    <p id="totalAmount" class="text-xl">Total amount spent up to now: <span id="totalSpent"><%= total %></span></p>
+    <p id="remainingBalance" class="text-lg mt-2"></p>
+
+    <form method="GET" action="/transactions" class="mb-4">
+      <select name="searchType" class="border p-2">
+        <option value="message_id" <% if (searchType === 'message_id') { %>selected<% } %>>Message ID</option>
+        <option value="amount" <% if (searchType === 'amount') { %>selected<% } %>>Amount</option>
+        <option value="debit_or_credit" <% if (searchType === 'debit_or_credit') { %>selected<% } %>>Debit or Credit</option>
+        <option value="transaction_date" <% if (searchType === 'transaction_date') { %>selected<% } %>>Transaction Date</option>
+        <option value="info" <% if (searchType === 'info') { %>selected<% } %>>Info</option>
+      </select>
+      <input 
+        type="<%= searchType === 'transaction_date' ? 'date' : 'text' %>" 
+        name="search" 
+        value="<%= search %>" 
+        placeholder="Search" 
+        class="border p-2" 
+        id="searchInput"
+      />
+      <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md">Search</button>
+    </form>
+
+    <table class="min-w-full bg-white border border-gray-200">
+      <thead>
+        <tr>
+          <th class="py-2 px-4 border-b">Message ID</th>
+          <th class="py-2 px-4 border-b">Amount</th>
+          <th class="py-2 px-4 border-b">Debit/Credit</th>
+          <th class="py-2 px-4 border-b">Transaction Date</th>
+          <th class="py-2 px-4 border-b">Transaction Time</th>
+          <th class="py-2 px-4 border-b">Transaction Info</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% transactions.forEach(transaction => { %>
+          <tr>
+            <td class="py-2 px-4 border-b"><%= transaction.message_id %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.amount %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.debit_or_credit %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.transaction_date %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.transaction_time %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.info %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+
+    <br>
+    <form action="/addexpenses" method="get">
+      <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700">Add Expenses</button>
+    </form>
+    <br><br>
+    <form action="/sum-amounts" method="get">
+      <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700">Get Total Amount</button>
+    </form>
+
+    <hr>  
+    <form action="/fetch-transactions" method="get" class="flex flex-col items-center space-y-4 bg-gray-50 p-4 rounded-md shadow-md">
+      <div class="w-full md:w-1/2">
+        <!-- <label for="startDate" class="block text-lg font-medium text-gray-700 mb-2">Start Date</label> 
+        <input type="date" name="startDate" id="startDate" class="w-full border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required> -->
+      </div>
+      <div class="w-full md:w-1/2">
+        <input type="hidden" name="endDate" id="endDate" class="border border-gray-300 px-4 py-2 rounded-md" required>
+      </div>
+      <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700 transition duration-300 ease-in-out" onclick="startLoading()">
+        Get Transaction Details
+      </button>
+    </form>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('limitForm');
+        const totalSpentElement = document.getElementById('totalSpent');
+        const remainingBalanceElement = document.getElementById('remainingBalance');
+
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          
+          const totalSpent = parseFloat(totalSpentElement.textContent);
+          const monthlyLimit = parseFloat(document.getElementById('monthlyLimit').value);
+
+          if (isNaN(totalSpent) || isNaN(monthlyLimit)) {
+            remainingBalanceElement.textContent = 'Invalid input. Please enter a valid number.';
+            return;
+          }
+
+          const remainingBalance = monthlyLimit - totalSpent;
+          remainingBalanceElement.textContent = `Remaining amount to use: ${remainingBalance.toFixed(2)}`;
+        });
+      });
+
+      function startLoading() {
+        // Get current date in Indian Standard Time (IST)
+        const todayIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        const today = new Date(todayIST);
+
+        // Set end date to next day in IST
+        const nextDay = new Date(today);
+        nextDay.setDate(today.getDate() + 1);
+
+        // Format the date as YYYY-MM-DD
+        const formattedDate = nextDay.toISOString().split('T')[0];
+        
+        // Set the value of the input field with id 'endDate'
+        document.getElementById('endDate').value = formattedDate;
+      }
+    </script>
+  </div>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+</head>
+
+<body class="bg-gray-100 p-8">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4">Transactions</h1>
+
+       
+        
+
+        <form method="GET" action="/transactions" class="mb-4">
+          <select name="searchType" class="border p-2" id="searchType">
+              <option value="message_id" <% if (searchType === 'message_id') { %>selected<% } %>>Message ID</option>
+              <option value="amount" <% if (searchType === 'amount') { %>selected<% } %>>Amount</option>
+              <option value="debit_or_credit" <% if (searchType === 'debit_or_credit') { %>selected<% } %>>Debit or Credit</option>
+              <option value="transaction_date" <% if (searchType === 'transaction_date') { %>selected<% } %>>Transaction Date</option>
+              <option value="info" <% if (searchType === 'info') { %>selected<% } %>>Info</option>
+              <option value="month" <% if (searchType === 'month') { %>selected<% } %>>Month</option>
+          </select>
+      
+          <div id="searchInputContainer">
+              <input type="<%= searchType === 'transaction_date' ? 'date' : 'text' %>" name="search" value="<%= search %>" placeholder="Search" class="border p-2" id="searchInput" />
+          </div>
+      
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md">Search</button>
+      </form>
+
+       
+        <table class="min-w-full bg-white border border-gray-200 mb-8">
+            <thead>
+                <tr>
+                    <th class="py-2 px-4 border-b">Message ID</th>
+                    <th class="py-2 px-4 border-b">Amount</th>
+                    <th class="py-2 px-4 border-b">Debit/Credit</th>
+                    <th class="py-2 px-4 border-b">Transaction Date</th>
+                    <th class="py-2 px-4 border-b">Transaction Time</th>
+                    <th class="py-2 px-4 border-b">Transaction Info</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% transactions.forEach(transaction => { %>
+                <tr>
+                    <td class="py-2 px-4 border-b"><%= transaction.message_id %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.amount %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.debit_or_credit %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.transaction_date %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.transaction_time %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.info %></td>
+                </tr>
+                <% }); %>
+            </tbody>
+        </table>
+
+       
+        <form action="/addexpenses" method="get">
+            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700">Add Expenses</button>
+        </form>
+        <br>
+        <br>
+
+         <div class="border border-gray-400 rounded-lg p-4  ">
+        <div class="border border-gray-400 rounded-lg p-4 mr-24" >
+            <form action="/sum-amounts" method="post">
+                <label for="month" class="block text-lg font-medium">Choose a month to See Expenses:</label>
+                <select id="month" name="month" class="block w-1/4 px-4 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
+                    <option value="01">January</option>
+                    <option value="02">February</option>
+                    <option value="03">March</option>
+                    <option value="04">April</option>
+                    <option value="05">May</option>
+                    <option value="06">June</option>
+                    <option value="07">July</option>
+                    <option value="08">August</option>
+                    <option value="09">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+                <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:bg-blue-600">Submit</button>
+            </form>
+          </div>
+        <div class="container mx-auto p-4">
+          <h1 class="text-2xl font-bold mb-4">Total Amount</h1>
+          <p  class="text-xl">Total Limit: 5000</p>
+          
+          <p id="totalAmount" class="text-xl">Total amount spent up to now: <span id="totalSpent"><%= 90 %></span></p>
+          <p id="remainingBalance" class="text-lg mt-2"></p>
+        </div>
+        </div> 
+        
+      
+      
+
+        <hr>
+
+        
+        <form action="/fetch-transactions" method="get" class="flex flex-col items-center space-y-4 bg-gray-50 p-4 rounded-md shadow-md">
+            <div class="w-full md:w-1/2">
+              
+            </div>
+            <div class="w-full md:w-1/2">
+                <input type="hidden" name="endDate" id="endDate" class="border border-gray-300 px-4 py-2 rounded-md" required>
+            </div>
+            <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700 transition duration-300 ease-in-out" onclick="startLoading()">
+                Get Transaction Details
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Get current month as a two-digit string (e.g., "01" for January)
+            const currentMonth = new Date().toLocaleString('en', { month: '2-digit' });
+
+            // Set the selected attribute based on the current month
+            const monthSelect = document.getElementById('month');
+            monthSelect.value = currentMonth;
+        });
+
+        function startLoading() {
+            // Get current date in Indian Standard Time (IST)
+            const todayIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+            const today = new Date(todayIST);
+
+            // Set end date to next day in IST
+            const nextDay = new Date(today);
+            nextDay.setDate(today.getDate() + 1);
+
+            // Format the date as YYYY-MM-DD
+            const formattedDate = nextDay.toISOString().split('T')[0];
+
+            // Set the value of the input field with id 'endDate'
+            document.getElementById('endDate').value = formattedDate;
+        }
+
+        
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchTypeSelect = document.getElementById('searchType');
+        const searchInputContainer = document.getElementById('searchInputContainer');
+
+        searchTypeSelect.addEventListener('change', function() {
+            const searchType = searchTypeSelect.value;
+            if (searchType === 'month') {
+                searchInputContainer.innerHTML = `
+                    <select name="search" class="border p-2">
+                        <option value="01" <%= search === '01' ? 'selected' : '' %>>January</option>
+                        <option value="02" <%= search === '02' ? 'selected' : '' %>>February</option>
+                        <option value="03" <%= search === '03' ? 'selected' : '' %>>March</option>
+                        <option value="04" <%= search === '04' ? 'selected' : '' %>>April</option>
+                        <option value="05" <%= search === '05' ? 'selected' : '' %>>May</option>
+                        <option value="06" <%= search === '06' ? 'selected' : '' %>>June</option>
+                        <option value="07" <%= search === '07' ? 'selected' : '' %>>July</option>
+                        <option value="08" <%= search === '08' ? 'selected' : '' %>>August</option>
+                        <option value="09" <%= search === '09' ? 'selected' : '' %>>September</option>
+                        <option value="10" <%= search === '10' ? 'selected' : '' %>>October</option>
+                        <option value="11" <%= search === '11' ? 'selected' : '' %>>November</option>
+                        <option value="12" <%= search === '12' ? 'selected' : '' %>>December</option>
+                    </select>
+                `;
+            } else {
+                searchInputContainer.innerHTML = `
+                    <input type="<%= searchType === 'transaction_date' ? 'date' : 'text' %>" name="search" value="<%= search %>" placeholder="Search" class="border p-2" id="searchInput" />
+                `;
+            }
+        });
+
+        searchTypeSelect.dispatchEvent(new Event('change')); // Trigger change event on page load to set initial state
+    });
+
+
+
+
+    </script>
+
+
+</body>
+
+</html> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+</head>
+
+<body class="bg-gray-100 p-8">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4">Transactions</h1>
+
+       
+        <!-- <form method="GET" action="/transactions" class="mb-4">
+            <select name="searchType" class="border p-2">
+                <option value="message_id" <% if (searchType === 'message_id') { %>selected<% } %>>Message ID</option>
+                <option value="amount" <% if (searchType === 'amount') { %>selected<% } %>>Amount</option>
+                <option value="debit_or_credit" <% if (searchType === 'debit_or_credit') { %>selected<% } %>>Debit or Credit</option>
+                <option value="transaction_date" <% if (searchType === 'transaction_date') { %>selected<% } %>>Transaction Date</option>
+                <option value="info" <% if (searchType === 'info') { %>selected<% } %>>Info</option>
+            </select>
+            <input type="<%= searchType === 'transaction_date' ? 'date' : 'text' %>" name="search" value="<%= search %>" placeholder="Search" class="border p-2" id="searchInput" />
+            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md">Search</button>
+        </form> -->
+
+        <form method="GET" action="/transactions" class="mb-4">
+          <select name="searchType" class="border p-2" id="searchType">
+              <option value="message_id" <% if (searchType === 'message_id') { %>selected<% } %>>Message ID</option>
+              <option value="amount" <% if (searchType === 'amount') { %>selected<% } %>>Amount</option>
+              <option value="debit_or_credit" <% if (searchType === 'debit_or_credit') { %>selected<% } %>>Debit or Credit</option>
+              <option value="transaction_date" <% if (searchType === 'transaction_date') { %>selected<% } %>>Transaction Date</option>
+              <option value="info" <% if (searchType === 'info') { %>selected<% } %>>Info</option>
+              <option value="month" <% if (searchType === 'month') { %>selected<% } %>>Month</option>
+          </select>
+      
+          <div id="searchInputContainer">
+              <input type="<%= searchType === 'transaction_date' ? 'date' : 'text' %>" name="search" value="<%= search %>" placeholder="Search" class="border p-2" id="searchInput" />
+          </div>
+      
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md">Search</button>
+      </form>
+
+       
+        <table class="min-w-full bg-white border border-gray-200 mb-8">
+            <thead>
+                <tr>
+                    <th class="py-2 px-4 border-b">Message ID</th>
+                    <th class="py-2 px-4 border-b">Amount</th>
+                    <th class="py-2 px-4 border-b">Debit/Credit</th>
+                    <th class="py-2 px-4 border-b">Transaction Date</th>
+                    <th class="py-2 px-4 border-b">Transaction Time</th>
+                    <th class="py-2 px-4 border-b">Transaction Info</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% transactions.forEach(transaction => { %>
+                <tr>
+                    <td class="py-2 px-4 border-b"><%= transaction.message_id %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.amount %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.debit_or_credit %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.transaction_date %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.transaction_time %></td>
+                    <td class="py-2 px-4 border-b"><%= transaction.info %></td>
+                </tr>
+                <% }); %>
+            </tbody>
+        </table>
+
+       
+        <form action="/addexpenses" method="get">
+            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700">Add Expenses</button>
+        </form>
+        <br>
+        <br>
+
+         <div class="border border-gray-400 rounded-lg p-4  ">
+        <div class="border border-gray-400 rounded-lg p-4 mr-24" >
+            <form action="/sum-amounts" method="post">
+                <label for="month" class="block text-lg font-medium">Choose a month to See Expenses:</label>
+                <select id="month" name="month" class="block w-1/4 px-4 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
+                    <option value="01">January</option>
+                    <option value="02">February</option>
+                    <option value="03">March</option>
+                    <option value="04">April</option>
+                    <option value="05">May</option>
+                    <option value="06">June</option>
+                    <option value="07">July</option>
+                    <option value="08">August</option>
+                    <option value="09">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+                <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:bg-blue-600">Submit</button>
+            </form>
+          </div>
+        <div class="container mx-auto p-4">
+          <h1 class="text-2xl font-bold mb-4">Total Amount</h1>
+          <p  class="text-xl">Total Limit: 5000</p>
+          
+          <p id="totalAmount" class="text-xl">Total amount spent up to now: <span id="totalSpent"><%= 90 %></span></p>
+          <p id="remainingBalance" class="text-lg mt-2"></p>
+        </div>
+        </div> 
+        
+      
+      
+
+        <hr>
+
+        
+        <form action="/fetch-transactions" method="get" class="flex flex-col items-center space-y-4 bg-gray-50 p-4 rounded-md shadow-md">
+            <div class="w-full md:w-1/2">
+              
+            </div>
+            <div class="w-full md:w-1/2">
+                <input type="hidden" name="endDate" id="endDate" class="border border-gray-300 px-4 py-2 rounded-md" required>
+            </div>
+            <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700 transition duration-300 ease-in-out" onclick="startLoading()">
+                Get Transaction Details
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Get current month as a two-digit string (e.g., "01" for January)
+            const currentMonth = new Date().toLocaleString('en', { month: '2-digit' });
+
+            // Set the selected attribute based on the current month
+            const monthSelect = document.getElementById('month');
+            monthSelect.value = currentMonth;
+        });
+
+        function startLoading() {
+            // Get current date in Indian Standard Time (IST)
+            const todayIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+            const today = new Date(todayIST);
+
+            // Set end date to next day in IST
+            const nextDay = new Date(today);
+            nextDay.setDate(today.getDate() + 1);
+
+            // Format the date as YYYY-MM-DD
+            const formattedDate = nextDay.toISOString().split('T')[0];
+
+            // Set the value of the input field with id 'endDate'
+            document.getElementById('endDate').value = formattedDate;
+        }
+
+        
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchTypeSelect = document.getElementById('searchType');
+        const searchInputContainer = document.getElementById('searchInputContainer');
+
+        searchTypeSelect.addEventListener('change', function() {
+            const searchType = searchTypeSelect.value;
+            if (searchType === 'month') {
+                searchInputContainer.innerHTML = `
+                    <select name="search" class="border p-2">
+                        <option value="01" <%= search === '01' ? 'selected' : '' %>>January</option>
+                        <option value="02" <%= search === '02' ? 'selected' : '' %>>February</option>
+                        <option value="03" <%= search === '03' ? 'selected' : '' %>>March</option>
+                        <option value="04" <%= search === '04' ? 'selected' : '' %>>April</option>
+                        <option value="05" <%= search === '05' ? 'selected' : '' %>>May</option>
+                        <option value="06" <%= search === '06' ? 'selected' : '' %>>June</option>
+                        <option value="07" <%= search === '07' ? 'selected' : '' %>>July</option>
+                        <option value="08" <%= search === '08' ? 'selected' : '' %>>August</option>
+                        <option value="09" <%= search === '09' ? 'selected' : '' %>>September</option>
+                        <option value="10" <%= search === '10' ? 'selected' : '' %>>October</option>
+                        <option value="11" <%= search === '11' ? 'selected' : '' %>>November</option>
+                        <option value="12" <%= search === '12' ? 'selected' : '' %>>December</option>
+                    </select>
+                `;
+            } else {
+                searchInputContainer.innerHTML = `
+                    <input type="<%= searchType === 'transaction_date' ? 'date' : 'text' %>" name="search" value="<%= search %>" placeholder="Search" class="border p-2" id="searchInput" />
+                `;
+            }
+        });
+
+        searchTypeSelect.dispatchEvent(new Event('change')); // Trigger change event on page load to set initial state
+    });
+
+
+
+
+    </script>
+
+
+</body>
+
+</html> 
+ 

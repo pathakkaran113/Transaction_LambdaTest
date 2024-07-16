@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactions</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+</head>
+<body>
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Transactions</h1>
+
+   
+
+    <form method="GET" action="/transactions" class="mb-4">
+       
+        <select name="searchType" class="border p-2">
+          <option value="message_id" <% if (searchType === 'message_id') { %>selected<% } %>>Message ID</option>
+          <option value="amount" <% if (searchType === 'amount') { %>selected<% } %>>Amount</option>
+          <option value="debit_or_credit" <% if (searchType === 'debit_or_credit') { %>selected<% } %>>Debit or Credit</option>
+          <option value="transaction_date" <% if (searchType === 'transaction_date') { %>selected<% } %>>Transaction Date</option>
+          <option value="info" <% if (searchType === 'info') { %>selected<% } %>>info</option>
+       
+        </select>
+        <input 
+    type="<%= searchType === 'transaction_date' ? 'date' : 'text' %>" 
+    name="search" 
+    value="<%= search %>" 
+    placeholder="Search" 
+    class="border p-2" 
+    id="searchInput"
+  />
+        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md">Search</button>
+      </form>
+
+    <table class="min-w-full bg-white border border-gray-200">
+      <thead>
+        <tr>
+          <!-- <th class="py-2 px-4 border-b">ID</th> -->
+          <th class="py-2 px-4 border-b">Message ID</th>
+          <th class="py-2 px-4 border-b">Amount</th>
+          <th class="py-2 px-4 border-b">Debit/Credit</th>
+          <th class="py-2 px-4 border-b">Transaction Date</th>
+          <th class="py-2 px-4 border-b">Transaction Time</th>
+          <th class="py-2 px-4 border-b">Transaction Info</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% transactions.forEach(transaction => { %>
+          <tr>
+            <!-- <td class="py-2 px-4 border-b"><%= transaction.id %></td> -->
+            <td class="py-2 px-4 border-b"><%= transaction.message_id %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.amount %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.debit_or_credit %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.transaction_date %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.transaction_time %></td>
+            <td class="py-2 px-4 border-b"><%= transaction.info %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <br>
+  <form action="/addexpenses" method="get">
+  <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700">Add Expenses</button>
+  </form>
+    <br>
+  <br>
+ 
+  <!-- <form action="/sum-amounts" method="get">
+    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700">Get Total Amount</button>
+</form> -->
+
+<div class="border border-gray-400 rounded-lg p-4 mr-24" >
+  <form action="/sum-amounts" method="post">
+    <label for="month" class="block text-lg font-medium">Choose a month to See Expenses:</label>
+    <select id="month" name="month" class="block w-1/4 px-4 py-2 mt-1 bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+    </select>
+    <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:bg-blue-600">Submit</button>
+</form>
+</div>
+
+<hr>  
+<!-- <form action="/fetch-transactions" method="get" onsubmit="startLoading()">
+  <div class="flex flex-col items-center space-y-4">
+    <input type="date" name="startDate" class="border border-gray-300 px-4 py-2 rounded-md" required>
+    <input type="date" name="endDate" class="border border-gray-300 px-4 py-2 rounded-md" required>
+    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700">Get Transaction Details</button>
+  </div>
+</form> -->
+
+<!-- <form action="/fetch-transactions" method="get" >
+  <div class="flex flex-col items-center space-y-4">
+        <input type="date" name="startDate" class="border border-gray-300 px-4 py-2 rounded-md" required>    
+    <input type="hidden" name="endDate" id="endDate" class="border border-gray-300 px-4 py-2 rounded-md" required> 
+    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700" onclick="startLoading()" >Get Transaction Details</button>
+  </div>
+</form> -->
+<form action="/fetch-transactions" method="get" class="flex flex-col items-center space-y-4 bg-gray-50 p-4 rounded-md shadow-md">
+  <div class="w-full md:w-1/2">
+    <!-- <label for="startDate" class="block text-lg font-medium text-gray-700 mb-2">Start Date</label> 
+    <input type="date" name="startDate" id="startDate" class="w-full border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required> -->
+    
+  </div>
+  <div class="w-full md:w-1/2">
+    <input type="hidden" name="endDate" id="endDate" class="border border-gray-300 px-4 py-2 rounded-md" required>
+  </div>
+  <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-md shadow-sm hover:bg-red-700 transition duration-300 ease-in-out" onclick="startLoading()">
+    Get Transaction Details
+  </button>
+</form>
+
+<!-- <form action="/fetch-transactions" method="POST">
+  <label for="endDate">End Date:</label>
+  <input type="date" id="endDate" name="endDate" required>
+  <button type="submit">Fetch Transactions</button>
+</form> -->
+
+
+    <script>
+        document.getElementById('loginButton').addEventListener('click', function() {
+            window.location.href = 'https://localhost:2020/sum-amounts';
+
+
+            function startLoading2() {
+      const loadingContainer = document.getElementById('loadingContainer');
+      loadingContainer.style.display = 'block'; // Show the loading container
+
+      const loadingBar = document.getElementById('loadingBar');
+      loadingBar.style.animation = 'loading 50s linear forwards';
+
+      // Simulate loading completion after 50 seconds (optional)
+      setTimeout(() => {
+        loadingContainer.style.display = 'none'; // Hide the loading container after animation completes
+      }, 55000); // 50 seconds in milliseconds
+    }
+        });
+
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Get current month as a two-digit string (e.g., "01" for January)
+            const currentMonth = new Date().toLocaleString('en', { month: '2-digit' });
+
+            // Set the selected attribute based on the current month
+            const monthSelect = document.getElementById('month');
+            monthSelect.value = currentMonth;
+        });
+
+
+  //       document.getElementById('searchType').addEventListener('change', function() {
+  //   var searchInput = document.getElementById('searchInput');
+  //   if (this.value === 'transaction_date') {
+  //     searchInput.type = 'date';
+  //     searchInput.placeholder = 'Select Date';
+  //   } else {
+  //     searchInput.type = 'text';
+  //     searchInput.placeholder = 'Search';
+  //   }
+  // });
+  
+  function startLoading() {
+    // Get current date in Indian Standard Time (IST)
+    const todayIST = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    const today = new Date(todayIST);
+
+    // Set end date to next day in IST
+    const nextDay = new Date(today);
+    nextDay.setDate(today.getDate() + 1);
+
+    // Format the date as YYYY-MM-DD
+    const formattedDate = nextDay.toISOString().split('T')[0];
+    
+    // Set the value of the input field with id 'endDate'
+    document.getElementById('endDate').value = formattedDate;
+}
+
+
+
+    </script>
+</body>
+</html> 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
